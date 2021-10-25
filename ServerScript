@@ -1,0 +1,198 @@
+#!/bin/bash
+
+bold=`echo -en "\e[1m"`
+underline=`echo -en "\e[4m"`
+normal=`echo -en "\e[0m"`
+red=`echo -en "\e[31m"`
+green=`echo -en "\e[32m"`
+lightaqua=`echo -en "\e[96m"`
+orange=`echo -en "\e[33m"`
+purple=`echo -en "\e[35m"`
+
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+#import NginxConf file
+source $SCRIPT_DIR/NginxConf
+
+## FUNCTIONS #########################################################################
+update_system() {
+    sudo apt -qq update && sudo apt -qq upgrade -y && sudo apt -qq full-upgrade -y && sudo apt -qq autoremove -y
+}
+
+install_openssh_server() {
+    sudo apt -qq -y install openssh-client openssh-server
+    #TODO #################################################################################################################################
+    #TODO sshd config
+    #TODO in sshd conf set PermitRootLogin no
+    mkdir -p $HOME/.ssh
+    chmod 0700 $HOME/.ssh
+    ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -C "My id_rsa key"
+    sudo systemctl reload ssh
+    
+    echo "${orange}TODO $normal"
+    
+}
+
+install_nginx() {
+    sudo apt -qq -y install nginx
+}
+
+configure_nginx() {
+    show_prerequisites
+
+    read -e -i "/var/www" -p "${green}Please enter webroot directory: $normal" webroot
+    echo $webroot
+    
+    read -p "${green}Please enter domains separated by space. (example.com api.example.com blog.example.com): $normal" domains
+    echo $domains
+    
+    read -p "${orange}Press enter to start: $normal"
+    
+    sudo rm -rf $webroot/html
+    sudo mkdir -p $webroot/public
+    sudo chown -R $USER:$USER $webroot/public
+    sudo chmod -R 755 $webroot/public
+    echo "<h1>default config: Hello World</h1>" | tee $webroot/public/index.html
+    
+    #write config files
+    default_conf
+    nginx_conf
+    letsencrypt_conf
+    security_conf
+    general_conf
+    proxy_conf
+    
+    #First create normal HTTP config
+    for domain in $domains
+    do
+        domain_conf
+        
+        sudo ln -s /etc/nginx/sites-available/$domain.conf /etc/nginx/sites-enabled/
+        sudo mkdir -p $webroot/${domain}/public
+        sudo chown -R $USER:$USER $webroot/${domain}/public
+        sudo chmod -R 755 $webroot/$domain
+        echo "<h1>$domain: Hello World</h1>" | tee $webroot/${domain}/public/index.html
+    done
+    
+    sudo nginx -t && sudo systemctl restart nginx
+    
+    #create certificates
+#    sudo openssl dhparam -out /etc/nginx/dhparam.pem 4096
+#    sudo apt install -qq -y certbot
+#    sudo mkdir -p $webroot/_letsencrypt
+#    sudo chown www-data $webroot/_letsencrypt
+    
+#    for domain in $domains
+#    do
+#      withoutsub=$(sed 's/.*\.\(.*\..*\)/\1/' <<< $domain)
+#      sudo certbot certonly --webroot -d $domain -w $webroot/_letsencrypt -n --email info@$withoutsub --agree-tos --force-renewal --redirect --uir --hsts --staple-ocsp --must-staple --rsa-key-size 4096
+#    done
+    
+    #create HTTPS config
+#    for domain in $domains
+#    do
+#        echo -n "${green}configure reverse proxy for $domain (y/n)? $normal"
+#        read answer
+#        if [ "$answer" != "${answer#[Yy]}" ] ;then
+#            read -p "${green}Enter proxy_pass for $domain (http://127.0.0.1:8080): $normal" proxy_pass
+            #creates HTTPS config and reverse proxy config
+#            domain_conf_with_proxy
+#        else
+#            #creates HTTPS config
+#            domain_conf_without_proxy
+#        fi
+#    done
+    
+#    sudo nginx -t && sudo systemctl restart nginx
+    
+    # Configure Certbot to reload NGINX when it successfully renews certificates:
+#    echo -e '#!/bin/bash\nnginx -t && systemctl reload nginx' | sudo tee /etc/letsencrypt/renewal-hooks/post/nginx-reload.sh
+#    sudo chmod a+x /etc/letsencrypt/renewal-hooks/post/nginx-reload.sh
+}
+
+install_firewall() {
+    sudo apt -qq -y install ufw
+    
+    echo -n "${green}Allow SSH (y/n)? $normal"
+    read answer
+    if [ "$answer" != "${answer#[Yy]}" ] ;then
+        sudo ufw allow SSH
+    fi
+    
+    echo -n "${green}Allow Nginx Full (y/n)? $normal"
+    read answer
+    if [ "$answer" != "${answer#[Yy]}" ] ;then
+        sudo ufw allow "Nginx Full"
+    fi
+    
+    echo "y" | sudo ufw enable
+    sudo ufw status
+}
+
+install_mariadb() {
+    dbuser="dbuser"
+    read -e -i "$dbuser" -p "${green}Enter new username for mariadb: $normal" dbuser
+    echo $dbuser
+
+    read -s -p "${green}Enter new password for $dbuser: $normal" password
+    echo
+    echo $password
+
+    read -e -i "mystixapi" -p "${green}Enter new database name: $normal" dbname
+    echo $dbname
+
+    read -s -p "${green}Enter root password: $normal" rootpw
+    echo
+    echo $rootpw
+    
+    read -p "${orange}Press enter to start: $normal"
+
+    sudo apt -qq -y install mariadb-server mariadb-client
+    
+    echo "${lightaqua}Click tru mysql_secure_installation $normal"
+    sudo mysql_secure_installation
+    
+    sudo mysql --user="root" --password="$rootpw" --execute="GRANT ALL PRIVILEGES ON *.* TO '$dbuser'@'localhost' IDENTIFIED BY '$password';"
+    sudo systemctl restart mariadb
+    sudo mysql --user="$dbuser" --password="$password" --execute='CREATE DATABASE IF NOT EXISTS `'$db_name'` CHARACTER SET utf8 COLLATE utf8_general_ci'
+    #sudo mysql --database="mysql" --execute="UPDATE user SET plugin='' WHERE user ='root';FLUSH PRIVILEGES;"
+    #sudo systemctl restart mariadb
+}
+
+install_fail2ban() {
+    sudo apt -qq -y install fail2ban
+    sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local #because jail.conf gets overriden by updates
+    sudo sed -i '/\[nginx-http-auth\]/a enabled = true' /etc/fail2ban/jail.local
+    sudo systemctl start fail2ban
+    sudo systemctl restart fail2ban
+    sleep 2
+    sudo fail2ban-client status
+}
+
+## MAIN ##############################################################################
+
+echo "${bold}${underline}${purple}Debian 11 - ServerScript$normal"
+
+#not superuser check
+if ! [ "$EUID" -ne 0 ] ; then
+    echo -e "${orange}Dont run this script as root, run as normal user.\nScript uses sudo if privileges are required.$normal"
+    exit
+fi
+
+#install sudo if not already installed
+if ! hash sudo 2>/dev/null; then
+	echo "${green}installing sudo$normal"
+    su -c "apt install sudo ; echo '$USER ALL=(ALL:ALL) ALL' | sudo EDITOR='tee -a' visudo"
+fi
+
+#foreach function ask y/n and execute function
+functions_array=(update_system install_openssh_server install_nginx configure_nginx install_firewall install_mariadb install_fail2ban)
+for i in "${functions_array[@]}"; do
+    formatted1=${i//_/ }
+    formatted2=${formatted1^}
+    echo -n "${purple}${formatted2^} (y/n)? $normal"
+    read answer
+    if [ "$answer" != "${answer#[Yy]}" ] ;then
+        ${i}
+    fi
+done
