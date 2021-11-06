@@ -148,7 +148,6 @@ configure_nginx() {
         # Configure Certbot to reload NGINX when it successfully renews certificates:
         echo -e '#!/bin/bash\nnginx -t && systemctl reload nginx' | sudo tee /etc/letsencrypt/renewal-hooks/post/nginx-reload.sh
         sudo chmod a+x /etc/letsencrypt/renewal-hooks/post/nginx-reload.sh
-
     fi
 }
 
