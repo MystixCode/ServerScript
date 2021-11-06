@@ -131,13 +131,21 @@ proxy_read_timeout                 60s;" | sudo tee /etc/nginx/proxy.conf
 }
 
 domain_conf() {
+
+    server_name_string="server_name $domain;"
+    echo -n "${green}Add www alias for $domain (y/n)? $normal"
+    read answer
+    if [ "$answer" != "${answer#[Yy]}" ] ;then
+        server_name_string="server_name $domain www.$domain;"
+    fi
+
     echo "# HTTP redirect
 server {
     listen      80;
     listen      [::]:80;
     root $webroot/$domain/public;
     index index.html;
-    server_name $domain;
+    $server_name_string
     include     letsencrypt.conf;
     location / {
             try_files \$uri \$uri/ =404;

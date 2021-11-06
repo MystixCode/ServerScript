@@ -24,10 +24,12 @@ install_openssh_server() {
     #TODO #################################################################################################################################
     #TODO sshd config
     #TODO in sshd conf set PermitRootLogin no
-    mkdir -p $HOME/.ssh
-    chmod 0700 $HOME/.ssh
-    ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -C "My id_rsa key"
-    sudo systemctl reload ssh
+
+    #TODO create a script to exec on client to generate stuff
+    #mkdir -p $HOME/.ssh
+    #chmod 0700 $HOME/.ssh
+    #ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -C "My id_rsa key"
+    #sudo systemctl reload ssh
     
     echo "${orange}TODO $normal"
     
@@ -66,12 +68,12 @@ configure_nginx() {
     for domain in $domains
     do
         domain_conf
-        
         sudo ln -s /etc/nginx/sites-available/$domain.conf /etc/nginx/sites-enabled/
         sudo mkdir -p $webroot/${domain}/public
         sudo chown -R $USER:$USER $webroot/${domain}/public
         sudo chmod -R 755 $webroot/$domain
         echo "<h1>$domain: Hello World</h1>" | tee $webroot/${domain}/public/index.html
+        cp $SCRIPT_DIR/favicon/favicon.ico $webroot/${domain}/public/favicon.ico
     done
     
     sudo nginx -t && sudo systemctl restart nginx
