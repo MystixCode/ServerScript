@@ -113,7 +113,7 @@ configure_nginx() {
     echo -n "${green}Configure for https and h2 (y/n)? $normal"
     read answer
     if [ "$answer" != "${answer#[Yy]}" ] ;then
-       
+       echo "${orange}TODO: config $normal"
     #create certificates
 #    sudo openssl dhparam -out /etc/nginx/dhparam.pem 4096
 #    sudo apt install -qq -y certbot
