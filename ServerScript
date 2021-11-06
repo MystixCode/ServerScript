@@ -11,15 +11,6 @@ purple=`echo -en "\e[35m"`
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-
-#install sudo if not already installed
-if ! hash sudo 2>/dev/null; then
-	echo "${purple}installing sudo$normal"
-    su -c "apt install sudo ; echo '$USER ALL=(ALL:ALL) ALL' | sudo EDITOR='tee -a' visudo"
-fi
-
-
-
 #import NginxConf file
 source $SCRIPT_DIR/NginxConf
 
@@ -33,15 +24,12 @@ install_openssh_server() {
     #TODO #################################################################################################################################
     #TODO sshd config
     #TODO in sshd conf set PermitRootLogin no
-
     #TODO create a script to exec on client to generate stuff
     #mkdir -p $HOME/.ssh
     #chmod 0700 $HOME/.ssh
     #ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -C "My id_rsa key"
     #sudo systemctl reload ssh
-    
-    echo "${orange}TODO $normal"
-    
+    echo "${orange}TODO: config $normal"
 }
 
 install_nginx() {
@@ -87,6 +75,10 @@ configure_nginx() {
     
     sudo nginx -t && sudo systemctl restart nginx
     
+    read -p "${orange}Now its time to manually check if u can reach ur domains over the internet. If everything works press enter to continue. $normal"
+
+#TODO: first close issue: Split HTTPS and Proxy pass config
+#TODO: ask: Configure for https and h2
     #create certificates
 #    sudo openssl dhparam -out /etc/nginx/dhparam.pem 4096
 #    sudo apt install -qq -y certbot
