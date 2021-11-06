@@ -157,7 +157,7 @@ install_mariadb() {
     
     sudo mysql --user="root" --password="$rootpw" --execute="GRANT ALL PRIVILEGES ON *.* TO '$dbuser'@'localhost' IDENTIFIED BY '$password';"
     sudo systemctl restart mariadb
-    sudo mysql --user="$dbuser" --password="$password" --execute='CREATE DATABASE IF NOT EXISTS `'$db_name'` CHARACTER SET utf8 COLLATE utf8_general_ci'
+    sudo mysql --user="$dbuser" --password="$password" --execute='CREATE DATABASE IF NOT EXISTS `'$dbname'` CHARACTER SET utf8 COLLATE utf8_general_ci'
     #sudo mysql --database="mysql" --execute="UPDATE user SET plugin='' WHERE user ='root';FLUSH PRIVILEGES;"
     #sudo systemctl restart mariadb
 }
