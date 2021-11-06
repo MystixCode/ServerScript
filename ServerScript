@@ -107,42 +107,38 @@ configure_nginx() {
     
     read -p "${orange}Now its time to manually check if u can reach ur domains over the internet. If everything works press enter to continue. $normal"
 
-#TODO: first close issue: Split HTTPS and Proxy pass config--> in process just need to finish configure_reverse_proxy() function
-
     #Then create HTTPS config
     echo -n "${green}Configure for https and h2 (y/n)? $normal"
     read answer
     if [ "$answer" != "${answer#[Yy]}" ] ;then
-       echo "${orange}TODO: config $normal"
-    #create certificates
-#    sudo openssl dhparam -out /etc/nginx/dhparam.pem 4096
-#    sudo apt install -qq -y certbot
-#    sudo mkdir -p $webroot/_letsencrypt
-#    sudo chown www-data $webroot/_letsencrypt
+        #create certificates
+        sudo apt install -qq -y certbot
+        sudo openssl dhparam -out /etc/nginx/dhparam.pem 4096
+        sudo mkdir -p $webroot/_letsencrypt
+        sudo chown www-data $webroot/_letsencrypt
     
-#    for domain in $domains
-#    do
-#      withoutsub=$(sed 's/.*\.\(.*\..*\)/\1/' <<< $domain)
-#      sudo certbot certonly --webroot -d $domain -w $webroot/_letsencrypt -n --email info@$withoutsub --agree-tos --force-renewal --redirect --uir --hsts --staple-ocsp --must-staple --rsa-key-size 4096
-#    done
+        for domain in $domains
+        do
+            withoutsub=$(sed 's/.*\.\(.*\..*\)/\1/' <<< $domain)
+            sudo certbot certonly --webroot -d $domain -w $webroot/_letsencrypt -n --email info@$withoutsub --agree-tos --force-renewal --redirect --uir --hsts --staple-ocsp --must-staple --rsa-key-size 4096
+        done
     
-    #create HTTPS config
-#    for domain in $domains
-#    do
-#            https_domain_conf
-#            echo -n "${green}configure reverse proxy for $domain (y/n)? $normal"
-#            read answer
-#            if [ "$answer" != "${answer#[Yy]}" ] ;then
-#                #reverse proxy conf
-#                configure_reverse_proxy
-#            fi
-#    done
+        for domain in $domains
+        do
+            https_domain_conf
+            echo -n "${green}configure reverse proxy for $domain (y/n)? $normal"
+            read answer
+            if [ "$answer" != "${answer#[Yy]}" ] ;then
+                #reverse proxy conf
+                configure_reverse_proxy
+            fi
+        done
     
-#    sudo nginx -t && sudo systemctl restart nginx
+        sudo nginx -t && sudo systemctl restart nginx
     
-    # Configure Certbot to reload NGINX when it successfully renews certificates:
-#    echo -e '#!/bin/bash\nnginx -t && systemctl reload nginx' | sudo tee /etc/letsencrypt/renewal-hooks/post/nginx-reload.sh
-#    sudo chmod a+x /etc/letsencrypt/renewal-hooks/post/nginx-reload.sh
+        # Configure Certbot to reload NGINX when it successfully renews certificates:
+        echo -e '#!/bin/bash\nnginx -t && systemctl reload nginx' | sudo tee /etc/letsencrypt/renewal-hooks/post/nginx-reload.sh
+        sudo chmod a+x /etc/letsencrypt/renewal-hooks/post/nginx-reload.sh
 
     fi
 }
