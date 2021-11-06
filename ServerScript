@@ -37,17 +37,10 @@ install_nginx() {
 }
 
 configure_reverse_proxy() {
-    
-        read -p "${green}Enter proxy_pass for $domain (http://127.0.0.1:8080): $normal" proxy_pass
-
-        echo "${orange}TODO: proxy_pass $normal"
-        #creates HTTPS config and reverse proxy config
-        #TODO replace location with following with sed only @ last server block in file
-        #    location / {
-        #        proxy_pass $proxy_pass;
-        #        include    proxy.conf;
-        #    }
-    fi
+    read -p "${green}Enter proxy_pass for $domain (http://127.0.0.1:8080): $normal" proxy_pass
+    string1='try_files $uri $uri/ =404;'
+    string2="proxy_pass $proxy_pass;\n            include    proxy.conf;"
+    sudo sed -i "s#$string1#$string2#g" /etc/nginx/sites-available/$domain.conf
 }
 
 configure_nginx() {
@@ -137,7 +130,12 @@ configure_nginx() {
 #    for domain in $domains
 #    do
 #            https_domain_conf
-#            configure_reverse_proxy #TODO save answers from http conf above and use them here without asking again
+#            echo -n "${green}configure reverse proxy for $domain (y/n)? $normal"
+#            read answer
+#            if [ "$answer" != "${answer#[Yy]}" ] ;then
+#                #reverse proxy conf
+#                configure_reverse_proxy
+#            fi
 #    done
     
 #    sudo nginx -t && sudo systemctl restart nginx
