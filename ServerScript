@@ -11,6 +11,15 @@ purple=`echo -en "\e[35m"`
 
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
+
+#install sudo if not already installed
+if ! hash sudo 2>/dev/null; then
+	echo "${purple}installing sudo$normal"
+    su -c "apt install sudo ; echo '$USER ALL=(ALL:ALL) ALL' | sudo EDITOR='tee -a' visudo"
+fi
+
+
+
 #import NginxConf file
 source $SCRIPT_DIR/NginxConf
 
