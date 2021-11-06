@@ -36,6 +36,20 @@ install_nginx() {
     sudo apt -qq -y install nginx
 }
 
+configure_reverse_proxy() {
+    
+        read -p "${green}Enter proxy_pass for $domain (http://127.0.0.1:8080): $normal" proxy_pass
+
+        echo "${orange}TODO: proxy_pass $normal"
+        #creates HTTPS config and reverse proxy config
+        #TODO replace location with following with sed only @ last server block in file
+        #    location / {
+        #        proxy_pass $proxy_pass;
+        #        include    proxy.conf;
+        #    }
+    fi
+}
+
 configure_nginx() {
     show_prerequisites
 
@@ -64,21 +78,49 @@ configure_nginx() {
     #First create normal HTTP config
     for domain in $domains
     do
-        domain_conf
+        server_name_string="server_name $domain;"
+
+        #add www alias
+        echo -n "${green}Add www alias for $domain (y/n)? $normal"
+        read answer
+        if [ "$answer" != "${answer#[Yy]}" ] ;then
+            server_name_string="server_name $domain www.$domain;"
+        fi
+
+        #basic http conf
+        http_domain_conf
+        
+        echo -n "${green}configure reverse proxy for $domain (y/n)? $normal"
+        read answer
+        if [ "$answer" != "${answer#[Yy]}" ] ;then
+            #reverse proxy conf
+            configure_reverse_proxy
+            sudo mkdir -p $webroot/${domain}
+        else
+            #normal webdir with index.html and favicon
+            sudo mkdir -p $webroot/${domain}/public
+            sudo chown -R $USER:$USER $webroot/${domain}/public
+            sudo chmod -R 755 $webroot/$domain/public
+            echo "<h1>$domain: Hello World</h1>" | tee $webroot/${domain}/public/index.html
+            cp $SCRIPT_DIR/favicon/favicon.ico $webroot/${domain}/public/favicon.ico
+        fi
+
+        #enable via link
         sudo ln -s /etc/nginx/sites-available/$domain.conf /etc/nginx/sites-enabled/
-        sudo mkdir -p $webroot/${domain}/public
-        sudo chown -R $USER:$USER $webroot/${domain}/public
-        sudo chmod -R 755 $webroot/$domain
-        echo "<h1>$domain: Hello World</h1>" | tee $webroot/${domain}/public/index.html
-        cp $SCRIPT_DIR/favicon/favicon.ico $webroot/${domain}/public/favicon.ico
+
     done
     
     sudo nginx -t && sudo systemctl restart nginx
     
     read -p "${orange}Now its time to manually check if u can reach ur domains over the internet. If everything works press enter to continue. $normal"
 
-#TODO: first close issue: Split HTTPS and Proxy pass config
-#TODO: ask: Configure for https and h2
+#TODO: first close issue: Split HTTPS and Proxy pass config--> in process just need to finish configure_reverse_proxy() function
+
+    #Then create HTTPS config
+    echo -n "${green}Configure for https and h2 (y/n)? $normal"
+    read answer
+    if [ "$answer" != "${answer#[Yy]}" ] ;then
+       
     #create certificates
 #    sudo openssl dhparam -out /etc/nginx/dhparam.pem 4096
 #    sudo apt install -qq -y certbot
@@ -94,16 +136,8 @@ configure_nginx() {
     #create HTTPS config
 #    for domain in $domains
 #    do
-#        echo -n "${green}configure reverse proxy for $domain (y/n)? $normal"
-#        read answer
-#        if [ "$answer" != "${answer#[Yy]}" ] ;then
-#            read -p "${green}Enter proxy_pass for $domain (http://127.0.0.1:8080): $normal" proxy_pass
-            #creates HTTPS config and reverse proxy config
-#            domain_conf_with_proxy
-#        else
-#            #creates HTTPS config
-#            domain_conf_without_proxy
-#        fi
+#            https_domain_conf
+#            configure_reverse_proxy #TODO save answers from http conf above and use them here without asking again
 #    done
     
 #    sudo nginx -t && sudo systemctl restart nginx
@@ -111,6 +145,8 @@ configure_nginx() {
     # Configure Certbot to reload NGINX when it successfully renews certificates:
 #    echo -e '#!/bin/bash\nnginx -t && systemctl reload nginx' | sudo tee /etc/letsencrypt/renewal-hooks/post/nginx-reload.sh
 #    sudo chmod a+x /etc/letsencrypt/renewal-hooks/post/nginx-reload.sh
+
+    fi
 }
 
 install_firewall() {
@@ -157,7 +193,7 @@ install_mariadb() {
     
     sudo mysql --user="root" --password="$rootpw" --execute="GRANT ALL PRIVILEGES ON *.* TO '$dbuser'@'localhost' IDENTIFIED BY '$password';"
     sudo systemctl restart mariadb
-    sudo mysql --user="$dbuser" --password="$password" --execute='CREATE DATABASE IF NOT EXISTS `'$db_name'` CHARACTER SET utf8 COLLATE utf8_general_ci'
+    sudo mysql --user="$dbuser" --password="$password" --execute='CREATE DATABASE IF NOT EXISTS `'$dbname'` CHARACTER SET utf8 COLLATE utf8_general_ci'
     #sudo mysql --database="mysql" --execute="UPDATE user SET plugin='' WHERE user ='root';FLUSH PRIVILEGES;"
     #sudo systemctl restart mariadb
 }
