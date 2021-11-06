@@ -134,6 +134,15 @@ configure_nginx() {
             fi
         done
     
+        echo -n "${green}Allow TLSv1.3 only (old android devices wont be supported anymore) (y/n)? $normal"
+        read answer
+        if [ "$answer" != "${answer#[Yy]}" ] ;then
+            #change ssl_protocols
+            sudo sed -i "s#TLSv1.2 TLSv1.3;#TLSv1.3;#g" /etc/nginx/nginx.conf
+            #change ssl_ciphers
+            sudo sed -i "s#EECDH+AESGCM:EDH+AESGCM;#TLS-CHACHA20-POLY1305-SHA256:TLS-AES-256-GCM-SHA384#g" /etc/nginx/nginx.conf
+        fi
+
         sudo nginx -t && sudo systemctl restart nginx
     
         # Configure Certbot to reload NGINX when it successfully renews certificates:
