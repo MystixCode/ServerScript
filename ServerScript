@@ -19,6 +19,25 @@ update_system() {
     sudo apt -qq update && sudo apt -qq upgrade -y && sudo apt -qq full-upgrade -y && sudo apt -qq autoremove -y
 }
 
+install_firewall() {
+    sudo apt -qq -y install ufw
+    
+    echo -n "${green}Allow SSH (y/n)? $normal"
+    read answer
+    if [ "$answer" != "${answer#[Yy]}" ] ;then
+        sudo ufw allow SSH
+    fi
+    
+    echo -n "${green}Allow Nginx Full (y/n)? $normal"
+    read answer
+    if [ "$answer" != "${answer#[Yy]}" ] ;then
+        sudo ufw allow "Nginx Full"
+    fi
+    
+    echo "y" | sudo ufw enable
+    sudo ufw status
+}
+
 install_openssh_server() {
     sudo apt -qq -y install openssh-client openssh-server
     #TODO #################################################################################################################################
@@ -83,21 +102,13 @@ configure_nginx() {
         #basic http conf
         http_domain_conf
         
-        echo -n "${green}configure reverse proxy for $domain (y/n)? $normal"
-        read answer
-        if [ "$answer" != "${answer#[Yy]}" ] ;then
-            #reverse proxy conf
-            configure_reverse_proxy
-            sudo mkdir -p $webroot/${domain}
-        else
-            #normal webdir with index.html and favicon
-            sudo mkdir -p $webroot/${domain}/public
-            sudo chown -R $USER:$USER $webroot/${domain}/public
-            sudo chmod -R 755 $webroot/$domain/public
-            echo "<h1>$domain: Hello World</h1>" | tee $webroot/${domain}/public/index.html
-            cp $SCRIPT_DIR/favicon/favicon.ico $webroot/${domain}/public/favicon.ico
-        fi
-
+        #public webdir with index.html and favicon
+        sudo mkdir -p $webroot/${domain}/public
+        sudo chown -R $USER:$USER $webroot/${domain}/public
+        sudo chmod -R 755 $webroot/$domain/public
+        echo "<h1>$domain: Hello World</h1>" | tee $webroot/${domain}/public/index.html
+        cp $SCRIPT_DIR/favicon/favicon.ico $webroot/${domain}/public/favicon.ico
+  
         #enable via link
         sudo ln -s /etc/nginx/sites-available/$domain.conf /etc/nginx/sites-enabled/
 
@@ -149,25 +160,6 @@ configure_nginx() {
         echo -e '#!/bin/bash\nnginx -t && systemctl reload nginx' | sudo tee /etc/letsencrypt/renewal-hooks/post/nginx-reload.sh
         sudo chmod a+x /etc/letsencrypt/renewal-hooks/post/nginx-reload.sh
     fi
-}
-
-install_firewall() {
-    sudo apt -qq -y install ufw
-    
-    echo -n "${green}Allow SSH (y/n)? $normal"
-    read answer
-    if [ "$answer" != "${answer#[Yy]}" ] ;then
-        sudo ufw allow SSH
-    fi
-    
-    echo -n "${green}Allow Nginx Full (y/n)? $normal"
-    read answer
-    if [ "$answer" != "${answer#[Yy]}" ] ;then
-        sudo ufw allow "Nginx Full"
-    fi
-    
-    echo "y" | sudo ufw enable
-    sudo ufw status
 }
 
 install_mariadb() {
@@ -227,7 +219,7 @@ if ! hash sudo 2>/dev/null; then
 fi
 
 #foreach function ask y/n and execute function
-functions_array=(update_system install_openssh_server install_nginx configure_nginx install_firewall install_mariadb install_fail2ban)
+functions_array=(update_system install_firewall install_openssh_server install_nginx configure_nginx install_mariadb install_fail2ban)
 for i in "${functions_array[@]}"; do
     formatted1=${i//_/ }
     formatted2=${formatted1^}
