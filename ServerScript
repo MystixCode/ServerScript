@@ -40,15 +40,15 @@ install_firewall() {
 
 install_openssh_server() {
     sudo apt -qq -y install openssh-client openssh-server
+    echo "${orange}Now stop here and run ClientScript on the computer u want to connect from to generate keys $normal"
+    read -p "${orange}When done press enter to continue: $normal"
     #TODO #################################################################################################################################
-    #TODO sshd config
-    #TODO in sshd conf set PermitRootLogin no
-    #TODO create a script to exec on client to generate stuff
-    #mkdir -p $HOME/.ssh
-    #chmod 0700 $HOME/.ssh
-    #ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -C "My id_rsa key"
-    #sudo systemctl reload ssh
-    echo "${orange}TODO: config $normal"
+    echo "${red}TODO ssh serverver config! $normal"
+    #sudo nano /etc/ssh/sshd_config
+    #PasswordAuthentication no
+    #ChallengeResponseAuthentication no
+    #UsePAM no
+    #sudo systemctl restart ssh
 }
 
 install_nginx() {
